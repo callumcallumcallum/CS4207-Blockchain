@@ -1,4 +1,4 @@
-After installing ganache: 
+After installing ganache:
 Click quick start (can be acessed at http://127.0.0.1:7545/ )
 
 with node version 18 run these in terminal:
