@@ -1,51 +1,56 @@
-// SPDX-License-Identifier: MIT 
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "./AcademicToken.sol";
 
+import "./Validator.sol";
 
 contract AcademicResources {
-    // Resource structure
+    AcademicToken public token;
+    Validator public validator;
+
     struct Resource {
         uint256 id;
         string name;
         string url;
         address uploader;
+        uint256 upvotes;
+        uint256 reports;
+        bool validated;
     }
 
-    // List of resources
     Resource[] private resources;
 
-    // Mapping to track reports for resources (key = resource ID)
-    mapping(uint256 => uint256) public reports;
-    mapping(uint256 => uint256) public upvotes;
-
-    // Resource ID tracker
     uint256 private nextResourceId = 1;
 
     AcademicToken private tokenContract;
 
     // Events (for updating logs)
     event ResourceUploaded(uint256 id, string name, string url, address uploader);
-    event ResourceReported(uint256 id, address reporter, uint256 reportCount);
+    event ResourceValidated(uint256 id, address validator);
     event ResourceUpvoted(uint256 id, address upvoter, uint256 upvoteCount);
+    event ResourceReported(uint256 id, address reporter, uint256 reportCount);
+    event TokensRewarded(address indexed user, uint256 amount);
 
-    constructor(address _tokenContractAddress){
-        tokenContract =  AcademicToken(_tokenContractAddress);
+    constructor(address tokenAddress, address validatorAddress) {
+        token = AcademicToken(tokenAddress);
+        validator = Validator(validatorAddress);
     }
+
+
     // Upload a new resource
     function uploadResource(string memory name, string memory url) public {
-
-        //checks if they're empty
         require(bytes(name).length > 0, "Resource name is required");
         require(bytes(url).length > 0, "Resource URL is required");
 
-        // create an instance of resource and add it to the array
         resources.push(Resource({
             id: nextResourceId,
             name: name,
             url: url,
-            uploader: msg.sender //the ETH address of the user calling the func
+            uploader: msg.sender,
+            upvotes: 0,
+            reports: 0,
+            validated: false
         }));
     
         emit ResourceUploaded(nextResourceId, name, url, msg.sender);
@@ -57,68 +62,68 @@ contract AcademicResources {
 
     }
 
-    // Get the total number of resources
-    function getResourceCount() public view returns (uint256) {
-        return resources.length;
-    }
+    function validateResource(uint256 id) public {
+        require(validator.isValidator(msg.sender), "Only validators can validate resources");
 
-    // Get a specific resource by ID
-    function getResource(uint256 id) public view returns (string memory, string memory, address) {
         for (uint256 i = 0; i < resources.length; i++) {
             if (resources[i].id == id) {
-                return (resources[i].name, resources[i].url, resources[i].uploader);
+                require(!resources[i].validated, "Resource is already validated");
+                resources[i].validated = true;
+
+                uint256 reward = calculateUploadReward();
+                token.transfer(resources[i].uploader, reward);
+                emit TokensRewarded(resources[i].uploader, reward);
+
+                emit ResourceValidated(id, msg.sender);
+                return;
             }
         }
         revert("Resource not found");
     }
 
-    //function for faculty to return a resource along with how many reports it has
-    function getResourceWithReports(uint256 id) public view returns (string memory, string memory, address, uint256) {
-    for (uint256 i = 0; i < resources.length; i++) {
-        if (resources[i].id == id) {
-            Resource memory resource = resources[i];
-            return (
-                resource.name,
-                resource.url,
-                resource.uploader,
-                reports[id] // Return the report count from the mapping
-            );
-        }
-    }
-    revert("Resource not found");
-    }
-
-
-    // Report a resource
-    function reportResource(uint256 id) public {
-        bool resourceExists = false;
-
-        // Check if the resource exists and increment its report count
-        for (uint256 i = 0; i < resources.length; i++) {
-            if (resources[i].id == id) {
-                resourceExists = true;
-                reports[id]++;
-                emit ResourceReported(id, msg.sender, reports[id]);
-                break;
-            }
-        }
-
-        require(resourceExists, "Resource not found");
-    }
-
     function upvoteResource(uint256 id) public {
-        bool resourceExists = false;
-
-        // Check if the resource exists and increment its report count
         for (uint256 i = 0; i < resources.length; i++) {
             if (resources[i].id == id) {
-                resourceExists = true;
-                upvotes[id]++;
-                emit ResourceUpvoted(id, msg.sender, upvotes[id]);
-                break;
+                require(resources[i].validated, "Resource must be validated to receive upvotes");
+                resources[i].upvotes++;
+                emit ResourceUpvoted(id, msg.sender, resources[i].upvotes);
+
+                uint256 reward = calculateUpvoteReward(resources[i].upvotes);
+                token.transfer(resources[i].uploader, reward);
+                emit TokensRewarded(resources[i].uploader, reward);
+                return;
             }
         }
+        revert("Resource not found");
+    }
 
-        require(resourceExists, "Resource not found");
+    function reportResource(uint256 id) public {
+        for (uint256 i = 0; i < resources.length; i++) {
+            if (resources[i].id == id) {
+                resources[i].reports++;
+                emit ResourceReported(id, msg.sender, resources[i].reports);
+                return;
+            }
+        }
+        revert("Resource not found");
+    }
+
+    function calculateUploadReward() internal view returns (uint256) {
+        uint256 circulation = token.totalSupply();
+        return circulation / 10000;
+    }
+
+    function calculateUpvoteReward(uint256 upvotes) internal view returns (uint256) {
+        uint256 circulation = token.totalSupply();
+        return (circulation / 100000) * upvotes;
+    }
+
+    function getResource(uint256 id) public view returns (Resource memory) {
+        for (uint256 i = 0; i < resources.length; i++) {
+            if (resources[i].id == id) {
+                return resources[i];
+            }
+        }
+        revert("Resource not found");
     }
 }
