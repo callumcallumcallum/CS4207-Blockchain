@@ -9,3 +9,20 @@ truffle init
 truffle compile (compiles contract)
 truffle migrate --reset --network development (deploys contract to ganache)
 truffle console --network development (opens truffle console to interact with contract)
+
+(Contract calls)
+
+Upload call:
+await instance.uploadResource("Resource Name", "https://example.com/resource", { from: accounts[0] });
+
+Report call:
+await instance.reportResource('Resource id(starts at 1)', { from: accounts[0] });
+
+Upvote call:
+await instance.upvoteResource('Resource id(starts at 1)', { from: accounts[0] });
+
+Get Resources (without report number (for students)):
+await instance.getResourceWithReports(1);
+
+Get Resources (with report number (for staff)):
+await instance.getResourceWithReports(1);
