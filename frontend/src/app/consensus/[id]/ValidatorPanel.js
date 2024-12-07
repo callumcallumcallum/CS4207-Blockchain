@@ -1,6 +1,6 @@
 "use client";
 import { ethers } from "ethers";
-import AcademicResourcesABI from "../../../../build/contracts/AcademicResources.json";
+import AcademicResourcesABI from "../../../../../build/contracts/AcademicResources.json";
 import { useEffect } from "react";
 
 export default function ValidatorPanel({ resourceId }) {
