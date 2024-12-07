@@ -81,4 +81,8 @@ contract AcademicResources {
         Resource memory resource = resources[id - 1];
         return (resource.name, resource.url, resource.uploader, resource.votesFor, resource.votesAgainst, resource.approved);
     }
+
+    function getNextResourceId() public view returns (uint256) {
+        return nextResourceId;
+    }
 }
