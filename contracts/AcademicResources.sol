@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT 
 pragma solidity ^0.8.0;
 
+import "./AcademicToken.sol";
+
+
 contract AcademicResources {
     // Resource structure
     struct Resource {
@@ -20,11 +23,16 @@ contract AcademicResources {
     // Resource ID tracker
     uint256 private nextResourceId = 1;
 
+    AcademicToken private tokenContract;
+
     // Events (for updating logs)
     event ResourceUploaded(uint256 id, string name, string url, address uploader);
     event ResourceReported(uint256 id, address reporter, uint256 reportCount);
     event ResourceUpvoted(uint256 id, address upvoter, uint256 upvoteCount);
 
+    constructor(address _tokenContractAddress){
+        tokenContract =  AcademicToken(_tokenContractAddress);
+    }
     // Upload a new resource
     function uploadResource(string memory name, string memory url) public {
 
@@ -39,9 +47,14 @@ contract AcademicResources {
             url: url,
             uploader: msg.sender //the ETH address of the user calling the func
         }));
-
+    
         emit ResourceUploaded(nextResourceId, name, url, msg.sender);
+
+        uint256 rewardAmount = 10 * (10 ** uint256(tokenContract.decimals()));
+        tokenContract.mint(msg.sender, rewardAmount);
+
         nextResourceId++;
+
     }
 
     // Get the total number of resources
