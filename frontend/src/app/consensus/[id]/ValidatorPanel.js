@@ -1,54 +1,17 @@
 "use client";
+
 import { ethers } from "ethers";
 import AcademicResourcesABI from "../../../../../build/contracts/AcademicResources.json";
-import { useEffect } from "react";
 
 export default function ValidatorPanel({ resourceId }) {
-    const deploySampleResource = async () => {
-        try {
-            if (typeof window.ethereum === "undefined") {
-                throw new Error("MetaMask is not installed. Please install it.");
-            }
-
-            const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            const signer = await provider.getSigner();
-
-            console.log("Signer address:", await signer.getAddress());
-
-            const contract = new ethers.Contract(
-                process.env.NEXT_PUBLIC_CONTRACT_ADDRESS,
-                AcademicResourcesABI.abi,
-                signer
-            );
-
-            console.log("Contract address:", contract.target);
-
-            const tx = await contract.uploadResource("Sample Resource", "https://example.com/resource");
-            console.log("Transaction sent:", tx);
-
-            const receipt = await tx.wait();
-            console.log("Transaction confirmed:", receipt);
-
-            alert("Sample resource uploaded successfully!");
-        } catch (error) {
-            console.error("Error uploading resource:", error.message);
-        }
-    };
-
     const handleVote = async (voteFor) => {
         try {
             if (typeof window.ethereum === "undefined") {
-                throw new Error("MetaMask is not installed. Please install it.");
+                throw new Error("MetaMask is not installed.");
             }
-
-            const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
 
             const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
-
-            console.log("Signer address:", await signer.getAddress());
 
             const contract = new ethers.Contract(
                 process.env.NEXT_PUBLIC_CONTRACT_ADDRESS,
@@ -56,29 +19,30 @@ export default function ValidatorPanel({ resourceId }) {
                 signer
             );
 
-            console.log("Contract address:", contract.target);
-
-            console.log(`Calling voteOnResource with ID: ${resourceId} and voteFor: ${voteFor}`);
-            const tx = await contract.voteOnResource(resourceId, voteFor);
-            console.log("Transaction sent:", tx);
-
-            const receipt = await tx.wait();
-            console.log("Transaction confirmed:", receipt);
-
+            await contract.voteOnResource(resourceId, voteFor);
             alert("Vote submitted successfully!");
         } catch (error) {
             console.error("Error voting on resource:", error.message);
         }
     };
 
-    useEffect(() => {
-        deploySampleResource();
-    }, []);
-
     return (
-        <div>
-            <button onClick={() => handleVote(true)}>Approve</button>
-            <button onClick={() => handleVote(false)}>Disapprove</button>
+        <div className="flex flex-col items-center bg-gray-800 p-6 rounded-lg shadow-md w-full max-w-md">
+            <h1 className="text-2xl font-bold text-white mb-4">Vote on Resource</h1>
+            <div className="flex space-x-4">
+                <button
+                    onClick={() => handleVote(true)}
+                    className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                >
+                    Approve
+                </button>
+                <button
+                    onClick={() => handleVote(false)}
+                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                >
+                    Disapprove
+                </button>
+            </div>
         </div>
     );
 }

@@ -11,7 +11,7 @@ export default function ResourcesPage() {
     const fetchResources = async () => {
         try {
             if (typeof window.ethereum === "undefined") {
-                throw new Error("MetaMask is not installed. Please install it.");
+                throw new Error("MetaMask is not installed.");
             }
 
             const provider = new ethers.BrowserProvider(window.ethereum);
@@ -23,32 +23,22 @@ export default function ResourcesPage() {
                 signer
             );
 
-            console.log("Fetching resources...");
             const nextResourceId = await contract.getNextResourceId();
-            console.log("Total resources:", nextResourceId);
-
             const resources = [];
-            console.log(resources)
             for (let i = 1; i < nextResourceId; i++) {
-                try {
-                    const resource = await contract.getResource(i);
-                    resources.push({
-                        id: i,
-                        name: resource[0],
-                        url: resource[1],
-                        uploader: resource[2],
-                        votesFor: resource[3],
-                        votesAgainst: resource[4],
-                        approved: resource[5],
-                    });
-                } catch (error) {
-                    console.error(`Error fetching resource ${i}:`, error.message);
-                }
+                const resource = await contract.getResource(i);
+                resources.push({
+                    id: i,
+                    name: resource[0],
+                    url: resource[1],
+                    uploader: resource[2],
+                    votesFor: resource[3],
+                    votesAgainst: resource[4],
+                    approved: resource[5],
+                });
             }
-
             setResources(resources);
         } catch (error) {
-            console.error("Error fetching resources:", error.message);
             setError(error.message);
         }
     };
@@ -58,26 +48,33 @@ export default function ResourcesPage() {
     }, []);
 
     return (
-        <div>
-            <h1>Academic Resources</h1>
-            {error && <p style={{ color: "red" }}>{error}</p>}
-            <ul>
+        <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center py-10">
+            <h1 className="text-4xl font-bold mb-8">Academic Resources</h1>
+            {error && <p className="text-red-500 mb-4">{error}</p>}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-11/12 max-w-7xl">
                 {resources.map((resource) => (
-                    <li key={resource.id}>
-                        <h2>{resource.name}</h2>
-                        <p>
-                            URL:{" "}
-                            <a href={resource.url} target="_blank" rel="noopener noreferrer">
-                                {resource.url}
-                            </a>
+                    <div key={resource.id} className="bg-gray-800 p-6 rounded-lg shadow-md">
+                        <h2 className="text-xl font-semibold">{resource.name}</h2>
+                        <p className="text-sm text-gray-400 mb-2">Uploader: {resource.uploader}</p>
+                        <p className="text-sm text-gray-400 mb-2">Votes For: {resource.votesFor}</p>
+                        <p className="text-sm text-gray-400 mb-2">Votes Against: {resource.votesAgainst}</p>
+                        <p
+                            className={`font-medium ${resource.approved ? "text-green-500" : "text-yellow-500"
+                                }`}
+                        >
+                            Status: {resource.approved ? "Approved" : "Pending"}
                         </p>
-                        <p>Uploader: {resource.uploader}</p>
-                        <p>Votes For: {resource.votesFor}</p>
-                        <p>Votes Against: {resource.votesAgainst}</p>
-                        <p>Status: {resource.approved ? "Approved" : "Pending"}</p>
-                    </li>
+                        <a
+                            href={resource.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-block mt-4 text-blue-400 hover:underline"
+                        >
+                            View Resource
+                        </a>
+                    </div>
                 ))}
-            </ul>
+            </div>
         </div>
     );
 }
