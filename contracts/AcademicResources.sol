@@ -1,111 +1,84 @@
-// SPDX-License-Identifier: MIT 
 pragma solidity ^0.8.0;
 
 contract AcademicResources {
-    // Resource structure
     struct Resource {
         uint256 id;
         string name;
         string url;
         address uploader;
+        uint256 votesFor;
+        uint256 votesAgainst;
+        bool approved;
     }
 
-    // List of resources
+    mapping(address => bool) public validators;
+    uint256 private requiredApprovals;
+
     Resource[] private resources;
 
-    // Mapping to track reports for resources (key = resource ID)
-    mapping(uint256 => uint256) public reports;
-    mapping(uint256 => uint256) public upvotes;
+    event ResourceUploaded(uint256 id, string name, string url, address uploader);
+    event ResourceVoted(uint256 id, address voter, bool voteFor);
+    event ResourceApproved(uint256 id, string name, bool approved);
 
-    // Resource ID tracker
+    modifier onlyValidator() {
+        require(validators[msg.sender], "Not a validator");
+        _;
+    }
+
     uint256 private nextResourceId = 1;
 
-    // Events (for updating logs)
-    event ResourceUploaded(uint256 id, string name, string url, address uploader);
-    event ResourceReported(uint256 id, address reporter, uint256 reportCount);
-    event ResourceUpvoted(uint256 id, address upvoter, uint256 upvoteCount);
+    constructor(address[] memory initialValidators, uint256 approvalsNeeded) {
+        for (uint256 i = 0; i < initialValidators.length; i++) {
+            validators[initialValidators[i]] = true;
+        }
+        requiredApprovals = approvalsNeeded;
+    }
 
-    // Upload a new resource
     function uploadResource(string memory name, string memory url) public {
-
-        //checks if they're empty
         require(bytes(name).length > 0, "Resource name is required");
         require(bytes(url).length > 0, "Resource URL is required");
 
-        // create an instance of resource and add it to the array
         resources.push(Resource({
             id: nextResourceId,
             name: name,
             url: url,
-            uploader: msg.sender //the ETH address of the user calling the func
+            uploader: msg.sender,
+            votesFor: 0,
+            votesAgainst: 0,
+            approved: false
         }));
 
         emit ResourceUploaded(nextResourceId, name, url, msg.sender);
         nextResourceId++;
     }
 
-    // Get the total number of resources
-    function getResourceCount() public view returns (uint256) {
-        return resources.length;
-    }
+    function voteOnResource(uint256 id, bool voteFor) public onlyValidator {
+        require(id > 0 && id < nextResourceId, "Invalid resource ID");
+        require(validators[msg.sender], "Not a validator");
 
-    // Get a specific resource by ID
-    function getResource(uint256 id) public view returns (string memory, string memory, address) {
-        for (uint256 i = 0; i < resources.length; i++) {
-            if (resources[i].id == id) {
-                return (resources[i].name, resources[i].url, resources[i].uploader);
-            }
-        }
-        revert("Resource not found");
-    }
+        // Add debug logs
+        emit ResourceVoted(id, msg.sender, voteFor);
 
-    //function for faculty to return a resource along with how many reports it has
-    function getResourceWithReports(uint256 id) public view returns (string memory, string memory, address, uint256) {
-    for (uint256 i = 0; i < resources.length; i++) {
-        if (resources[i].id == id) {
-            Resource memory resource = resources[i];
-            return (
-                resource.name,
-                resource.url,
-                resource.uploader,
-                reports[id] // Return the report count from the mapping
-            );
-        }
-    }
-    revert("Resource not found");
-    }
+        Resource storage resource = resources[id - 1];
 
-
-    // Report a resource
-    function reportResource(uint256 id) public {
-        bool resourceExists = false;
-
-        // Check if the resource exists and increment its report count
-        for (uint256 i = 0; i < resources.length; i++) {
-            if (resources[i].id == id) {
-                resourceExists = true;
-                reports[id]++;
-                emit ResourceReported(id, msg.sender, reports[id]);
-                break;
-            }
+        if (voteFor) {
+            resource.votesFor++;
+        } else {
+            resource.votesAgainst++;
         }
 
-        require(resourceExists, "Resource not found");
+        if (resource.votesFor >= requiredApprovals) {
+            resource.approved = true;
+            emit ResourceApproved(id, resource.name, true);
+        } else if (resource.votesAgainst >= requiredApprovals) {
+            resource.approved = false;
+            emit ResourceApproved(id, resource.name, false);
+        }
     }
 
-    function upvoteResource(uint256 id) public {
-        bool resourceExists = false;
-
-        // Check if the resource exists and increment its report count
-        for (uint256 i = 0; i < resources.length; i++) {
-            if (resources[i].id == id) {
-                resourceExists = true;
-                upvotes[id]++;
-                emit ResourceUpvoted(id, msg.sender, upvotes[id]);
-                break;
-            }
-        }
-
-        require(resourceExists, "Resource not found");
+    function getResource(uint256 id) public view returns (string memory, string memory, address, uint256, uint256, bool) {
+        require(id > 0 && id < nextResourceId, "Invalid resource ID");
+        Resource memory resource = resources[id - 1];
+        return (resource.name, resource.url, resource.uploader, resource.votesFor, resource.votesAgainst, resource.approved);
     }
 }

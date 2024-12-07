@@ -2,8 +2,11 @@ const fs = require("fs");
 const path = require("path");
 const AcademicResources = artifacts.require("AcademicResources");
 
-module.exports = async function (deployer) {
-  await deployer.deploy(AcademicResources);
+module.exports = async function (deployer, network, accounts) {
+  const initialValidators = [accounts[0], accounts[1], accounts[2]];
+  const approvalsNeeded = 2;
+
+  await deployer.deploy(AcademicResources, initialValidators, approvalsNeeded);
   const contract = await AcademicResources.deployed();
 
   const envFilePath = path.resolve(__dirname, "../frontend/.env.local");
