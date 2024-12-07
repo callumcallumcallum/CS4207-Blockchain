@@ -2,21 +2,21 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-async function parseBody(req) {
-  return new Promise((resolve, reject) => {
-    let body = '';
-    req.on('data', chunk => {
-      body += chunk.toString();
-    });
-    req.on('end', () => {
-      try {
-        resolve(JSON.parse(body));
-      } catch (error) {
-        reject(error);
-      }
-    });
-  });
-}
+// async function parseBody(req) {
+//   return new Promise((resolve, reject) => {
+//     let body = '';
+//     req.on('data', chunk => {
+//       body += chunk.toString();
+//     });
+//     req.on('end', () => {
+//       try {
+//         resolve(JSON.parse(body));
+//       } catch (error) {
+//         reject(error);
+//       }
+//     });
+//   });
+// }
 
 export async function POST(req, res) {
   const body = await req.json();
@@ -62,10 +62,10 @@ export async function PUT (req, res) {
   const body = await req.json();
   console.log("Request body:", body);
 
-  const { name: updateUsername, password: updatePassword, isTeacher: updateIsTeacher, email: updateEmail } = body;
+  const { id = id, name: updateUsername, password: updatePassword, isTeacher: updateIsTeacher, email: updateEmail } = body;
   try {
     const updatedUser = await prisma.user.update({
-      where: { name: req.query.id },
+      where: { id },
       data: {
         name: updateUsername,
         password: updatePassword,
@@ -81,13 +81,15 @@ export async function PUT (req, res) {
 }
 
 export async function DELETE(req, res) {
+  const id = req.nextUrl.searchParams.get("id");
+  console.log("Request id:", id);
+  console.log("id type:", typeof id);
   try {
     await prisma.user.delete({
-      where: { name: req.query.username },
+      where: { id: parseInt(id, 10) },
     });
-    return Response.end();
+    return Response.json({ success: true });
   } catch (error) {
-    console.error('Error deleting user:', error);
     return Response.json({ error: 'User not found' });
   }
 }
