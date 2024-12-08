@@ -2,12 +2,13 @@
 pragma solidity ^0.8.0;
 
 import "./AcademicToken.sol";
-
+import "./Staking.sol";
 import "./Validator.sol";
 
 contract AcademicResources {
     AcademicToken private tokenContract;
     Validator public validator;
+    Staking public staking;
 
     struct Resource {
         uint256 id;
@@ -32,9 +33,10 @@ contract AcademicResources {
     event ResourceReported(uint256 id, address reporter, uint256 reportCount);
     event TokensRewarded(address indexed user, uint256 amount);
 
-    constructor(address tokenAddress, address validatorAddress) {
+    constructor(address tokenAddress, address validatorAddress, address stakingAddress) {
         tokenContract = AcademicToken(tokenAddress);
         validator = Validator(validatorAddress);
+        staking = Staking(stakingAddress); 
     }
 
 
@@ -77,6 +79,7 @@ contract AcademicResources {
                 
                 uint256 reward = calculateUploadReward();
                 //tokenContract.transfer(pendingResources[i].uploader, reward);
+                staking.rewardToken();
                 emit TokensRewarded(pendingResources[i].uploader, reward);
                 emit ResourceValidated(id, msg.sender);
                 emit ResourceUploaded(nextResourceId, pendingResources[i].name, pendingResources[i].url, msg.sender);

@@ -1,51 +1,39 @@
 const AcademicToken = artifacts.require("AcademicToken");
 const Validator = artifacts.require("Validator");
 const AcademicResources = artifacts.require("AcademicResources");
+const Staking = artifacts.require("Staking");
 const path = require("path");
 
 module.exports = async function (deployer, network, accounts) {
-  const initialSupply = web3.utils.toWei("1000", "ether"); 
+  const initialSupply = web3.utils.toWei("1000", "ether");
+  const admin = accounts[0];
 
   await deployer.deploy(AcademicToken, initialSupply);
   const tokenInstance = await AcademicToken.deployed();
+  console.log(`AcademicToken deployed at ${tokenInstance.address}`);
 
-  const admin = accounts[0];
-
-  
-
-
-
-  // Deploy Validator
   await deployer.deploy(Validator, tokenInstance.address);
   const validatorInstance = await Validator.deployed();
+  console.log(`Validator deployed at ${validatorInstance.address}`);
+  await deployer.deploy(Staking, tokenInstance.address, web3.utils.toWei("0.01", "ether")  , validatorInstance.address);
+  const stakingInstance = await Staking.deployed();
 
+  await deployer.deploy(AcademicResources, tokenInstance.address, validatorInstance.address, stakingInstance.address);
+  const resourcesInstance = await AcademicResources.deployed();
 
-  
-  await deployer.deploy(AcademicResources, tokenInstance.address, validatorInstance.address);
+  console.log(`AcademicResources deployed at ${resourcesInstance.address}`);
 
-module.exports = async function (deployer, network, accounts) {
-  const initialValidators = [accounts[0], accounts[1], accounts[2]];
-  const approvalsNeeded = 2;
-
-  await deployer.deploy(AcademicResources, initialValidators, approvalsNeeded);
-  const contract = await AcademicResources.deployed();
-
+  const fundingAmount = web3.utils.toWei("500", "ether");
+  await tokenInstance.transfer(resourcesInstance.address, fundingAmount);
+  console.log(`Transferred ${fundingAmount} tokens to AcademicResources`);
 
   const envFilePath = path.resolve(__dirname, "../frontend/.env.local");
-  const envContent = `NEXT_PUBLIC_CONTRACT_ADDRESS=${contract.address}\n`;
-  // Transfer tokens to the deployer to fund AcademicResources
-  const fundingAmount = web3.utils.toWei("1000", "ether"); // 100,000 tokens
-  await tokenInstance.transfer(admin, fundingAmount);
+  const envContent = `
+      NEXT_PUBLIC_TOKEN_ADDRESS=${tokenInstance.address}
+      NEXT_PUBLIC_VALIDATOR_ADDRESS=${validatorInstance.address}
+      NEXT_PUBLIC_CONTRACT_ADDRESS=${resourcesInstance.address}
+    `;
 
-  // Approve the AcademicResources contract to pull tokens from deployer
-  await tokenInstance.approve(admin, fundingAmount);
-
-  // Deploy AcademicResources
-  await deployer.deploy(
-    AcademicResources,
-    tokenInstance.address,
-    validatorInstance.address
-  );
-  const resourcesInstance = await AcademicResources.deployed();
+  require("fs").writeFileSync(envFilePath, envContent.trim());
+  console.log(`Environment variables written to ${envFilePath}`);
 };
-}
