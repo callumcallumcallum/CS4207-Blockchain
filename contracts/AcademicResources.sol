@@ -211,7 +211,8 @@ contract AcademicResources {
             }
         }
         return false;
-
+    }
+    
     function getValidatedResources() public view returns (Resource[] memory) {
         return resources;
     }
