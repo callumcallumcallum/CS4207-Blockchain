@@ -1,6 +1,27 @@
-const fs = require("fs");
-const path = require("path");
+const AcademicToken = artifacts.require("AcademicToken");
+const Validator = artifacts.require("Validator");
 const AcademicResources = artifacts.require("AcademicResources");
+const path = require("path");
+
+module.exports = async function (deployer, network, accounts) {
+  const initialSupply = web3.utils.toWei("1000", "ether"); 
+
+  await deployer.deploy(AcademicToken, initialSupply);
+  const tokenInstance = await AcademicToken.deployed();
+
+  const admin = accounts[0];
+
+  
+
+
+
+  // Deploy Validator
+  await deployer.deploy(Validator, tokenInstance.address);
+  const validatorInstance = await Validator.deployed();
+
+
+  
+  await deployer.deploy(AcademicResources, tokenInstance.address, validatorInstance.address);
 
 module.exports = async function (deployer, network, accounts) {
   const initialValidators = [accounts[0], accounts[1], accounts[2]];
@@ -9,20 +30,22 @@ module.exports = async function (deployer, network, accounts) {
   await deployer.deploy(AcademicResources, initialValidators, approvalsNeeded);
   const contract = await AcademicResources.deployed();
 
+
   const envFilePath = path.resolve(__dirname, "../frontend/.env.local");
   const envContent = `NEXT_PUBLIC_CONTRACT_ADDRESS=${contract.address}\n`;
+  // Transfer tokens to the deployer to fund AcademicResources
+  const fundingAmount = web3.utils.toWei("1000", "ether"); // 100,000 tokens
+  await tokenInstance.transfer(admin, fundingAmount);
 
-  if (fs.existsSync(envFilePath)) {
-    const existingContent = fs.readFileSync(envFilePath, "utf8");
-    const updatedContent = existingContent.replace(
-      /NEXT_PUBLIC_CONTRACT_ADDRESS=.*/,
-      envContent
-    );
-    fs.writeFileSync(envFilePath, updatedContent);
-  } else {
-    fs.writeFileSync(envFilePath, envContent);
-  }
+  // Approve the AcademicResources contract to pull tokens from deployer
+  await tokenInstance.approve(admin, fundingAmount);
 
-  console.log(`Contract deployed at address: ${contract.address}`);
-  console.log(`Address saved to ${envFilePath}`);
+  // Deploy AcademicResources
+  await deployer.deploy(
+    AcademicResources,
+    tokenInstance.address,
+    validatorInstance.address
+  );
+  const resourcesInstance = await AcademicResources.deployed();
 };
+}

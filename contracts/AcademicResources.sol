@@ -1,38 +1,41 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "./AcademicToken.sol";
+
+import "./Validator.sol";
+
 contract AcademicResources {
+    AcademicToken private tokenContract;
+    Validator public validator;
+
     struct Resource {
         uint256 id;
         string name;
         string url;
         address uploader;
-        uint256 votesFor;
-        uint256 votesAgainst;
-        bool approved;
+        uint256 upvotes;
+        uint256 reports;
+        bool validated;
     }
-
-    mapping(address => bool) public validators;
-    uint256 private requiredApprovals;
 
     Resource[] private resources;
 
-    event ResourceUploaded(uint256 id, string name, string url, address uploader);
-    event ResourceVoted(uint256 id, address voter, bool voteFor);
-    event ResourceApproved(uint256 id, string name, bool approved);
-
-    modifier onlyValidator() {
-        require(validators[msg.sender], "Not a validator");
-        _;
-    }
-
     uint256 private nextResourceId = 1;
 
-    constructor(address[] memory initialValidators, uint256 approvalsNeeded) {
-        for (uint256 i = 0; i < initialValidators.length; i++) {
-            validators[initialValidators[i]] = true;
-        }
-        requiredApprovals = approvalsNeeded;
+
+    // Events (for updating logs)
+    event ResourceUploaded(uint256 id, string name, string url, address uploader);
+    event ResourceValidated(uint256 id, address validator);
+    event ResourceUpvoted(uint256 id, address upvoter, uint256 upvoteCount);
+    event ResourceReported(uint256 id, address reporter, uint256 reportCount);
+    event TokensRewarded(address indexed user, uint256 amount);
+
+    constructor(address tokenAddress, address validatorAddress) {
+        tokenContract = AcademicToken(tokenAddress);
+        validator = Validator(validatorAddress);
     }
+
 
     function uploadResource(string memory name, string memory url) public {
         require(bytes(name).length > 0, "Resource name is required");
@@ -43,46 +46,82 @@ contract AcademicResources {
             name: name,
             url: url,
             uploader: msg.sender,
-            votesFor: 0,
-            votesAgainst: 0,
-            approved: false
+            upvotes: 0,
+            reports: 0,
+            validated: false
         }));
-
+    
         emit ResourceUploaded(nextResourceId, name, url, msg.sender);
+
+        // uint256 rewardAmount = 10 * (10 ** uint256(tokenContract.decimals()));
+        // tokenContract.mint(msg.sender, rewardAmount);
+
         nextResourceId++;
+
     }
 
-    function voteOnResource(uint256 id, bool voteFor) public onlyValidator {
-        require(id > 0 && id < nextResourceId, "Invalid resource ID");
-        require(validators[msg.sender], "Not a validator");
+    function validateResource(uint256 id) public {
+        require(validator.isValidator(msg.sender), "Only validators can validate resources");
 
-        // Add debug logs
-        emit ResourceVoted(id, msg.sender, voteFor);
+        for (uint256 i = 0; i < resources.length; i++) {
+            if (resources[i].id == id) {
+                require(!resources[i].validated, "Resource is already validated");
+                resources[i].validated = true;
 
-        Resource storage resource = resources[id - 1];
+                uint256 reward = calculateUploadReward();
+                tokenContract.transfer(resources[i].uploader, reward);
+                emit TokensRewarded(resources[i].uploader, reward);
 
-        if (voteFor) {
-            resource.votesFor++;
-        } else {
-            resource.votesAgainst++;
+                emit ResourceValidated(id, msg.sender);
+                return;
+            }
         }
+        revert("Resource not found");
+    }
 
-        if (resource.votesFor >= requiredApprovals) {
-            resource.approved = true;
-            emit ResourceApproved(id, resource.name, true);
-        } else if (resource.votesAgainst >= requiredApprovals) {
-            resource.approved = false;
-            emit ResourceApproved(id, resource.name, false);
+    function upvoteResource(uint256 id) public {
+        for (uint256 i = 0; i < resources.length; i++) {
+            if (resources[i].id == id) {
+                require(resources[i].validated, "Resource must be validated to receive upvotes");
+                resources[i].upvotes++;
+                emit ResourceUpvoted(id, msg.sender, resources[i].upvotes);
+
+                uint256 reward = calculateUpvoteReward(resources[i].upvotes);
+                tokenContract.transfer(resources[i].uploader, reward);
+                emit TokensRewarded(resources[i].uploader, reward);
+                return;
+            }
         }
+        revert("Resource not found");
     }
 
-    function getResource(uint256 id) public view returns (string memory, string memory, address, uint256, uint256, bool) {
-        require(id > 0 && id < nextResourceId, "Invalid resource ID");
-        Resource memory resource = resources[id - 1];
-        return (resource.name, resource.url, resource.uploader, resource.votesFor, resource.votesAgainst, resource.approved);
+    function reportResource(uint256 id) public {
+        for (uint256 i = 0; i < resources.length; i++) {
+            if (resources[i].id == id) {
+                resources[i].reports++;
+                emit ResourceReported(id, msg.sender, resources[i].reports);
+                return;
+            }
+        }
+        revert("Resource not found");
     }
 
-    function getNextResourceId() public view returns (uint256) {
-        return nextResourceId;
+    function calculateUploadReward() internal view returns (uint256) {
+        uint256 circulation = tokenContract.totalSupply();
+        return circulation / 10000;
+    }
+
+    function calculateUpvoteReward(uint256 upvotes) internal view returns (uint256) {
+        uint256 circulation = tokenContract.totalSupply();
+        return (circulation / 100000) * upvotes;
+    }
+
+    function getResource(uint256 id) public view returns (Resource memory) {
+        for (uint256 i = 0; i < resources.length; i++) {
+            if (resources[i].id == id) {
+                return resources[i];
+            }
+        }
+        revert("Resource not found");
     }
 }
