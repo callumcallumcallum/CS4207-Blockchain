@@ -26,7 +26,13 @@ export default function ValidatorPanel({ resourceId }) {
                 );
 
                 const address = await signer.getAddress();
+                console.log("User Address:", address);
+
+                const stakes = await validatorContract.stakes(address);
+                console.log("Staked Tokens:", stakes.toString());
+
                 const isValidator = await validatorContract.isValidator(address);
+                console.log("Is Validator:", isValidator);
                 setIsValidator(isValidator);
             } catch (error) {
                 console.error("Error checking validator role:", error.message);
@@ -51,6 +57,10 @@ export default function ValidatorPanel({ resourceId }) {
                 AcademicResourcesABI.abi,
                 signer
             );
+
+            console.log(`Validating Resource ID: ${resourceId}`);
+            const resource = await contract.getResource(resourceId);
+            console.log("Resource to Validate:", resource);
 
             const tx = await contract.validateResource(resourceId);
             await tx.wait();
