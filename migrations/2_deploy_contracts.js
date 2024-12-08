@@ -15,6 +15,7 @@ module.exports = async function (deployer, network, accounts) {
   await deployer.deploy(Validator, tokenInstance.address);
   const validatorInstance = await Validator.deployed();
   console.log(`Validator deployed at ${validatorInstance.address}`);
+
   await deployer.deploy(Staking, tokenInstance.address, web3.utils.toWei("0.01", "ether")  , validatorInstance.address);
   const stakingInstance = await Staking.deployed();
 

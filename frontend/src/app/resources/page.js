@@ -51,6 +51,29 @@ export default function ResourcesPage() {
         }
     };
 
+    const reportResource = async (resourceId) => {
+        try{
+            if (typeof window.ethereum === "undefined") {
+                throw new Error("MetaMask is not installed.");
+            }
+
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+
+            const contract = new ethers.Contract(
+                process.env.NEXT_PUBLIC_CONTRACT_ADDRESS,
+                AcademicResourcesABI.abi,
+                signer
+            );
+
+            await contract.reportResource(resourceId);
+            alert("Resource reported successfully!");
+        } catch (error) {
+            console.error(error.message);
+        }
+    };
+
+
     useEffect(() => {
         fetchResources();
     }, []);
@@ -80,6 +103,9 @@ export default function ResourcesPage() {
                         >
                             View Resource
                         </a>
+                        <button
+                            onClick={() => reportResource(resource.id)}
+                            className="block mt-4 text-red-500 hover:underline">Report Resource</button>
                     </div>
                 ))}
             </div>
