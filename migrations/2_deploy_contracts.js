@@ -33,6 +33,7 @@ module.exports = async function (deployer, network, accounts) {
       NEXT_PUBLIC_TOKEN_ADDRESS=${tokenInstance.address}
       NEXT_PUBLIC_VALIDATOR_ADDRESS=${validatorInstance.address}
       NEXT_PUBLIC_CONTRACT_ADDRESS=${resourcesInstance.address}
+      NEXT_PUBLIC_STAKING_ADDRESS=${stakingInstance.address}
     `;
 
   require("fs").writeFileSync(envFilePath, envContent.trim());

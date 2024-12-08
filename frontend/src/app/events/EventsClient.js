@@ -1,88 +1,41 @@
 "use client";
 
 import { useState } from "react";
-import { ethers } from "ethers";
+import { getContractsWithSigner } from "../../../utils/getContracts";
 
 export default function EventsClient({ events }) {
     const [eventList, setEventList] = useState(events);
     const [modalOpen, setModalOpen] = useState(false);
     const [walletAddress, setWalletAddress] = useState(null);
-    const [formData, setFormData] = useState({
-        title: "",
-        description: "",
-        capacity: "",
-    });
 
     const connectWallet = async () => {
         try {
-            if (typeof window.ethereum === "undefined") {
-                throw new Error("MetaMask is not installed.");
-            }
-
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            const accounts = await provider.send("eth_requestAccounts", []);
-            setWalletAddress(accounts[0]);
-            console.log("Connected wallet:", accounts[0]);
+            const { tokenContract } = await getContractsWithSigner();
+            const address = await tokenContract.runner.getAddress();
+            setWalletAddress(address);
+            console.log("Connected wallet:", address);
         } catch (error) {
             console.error("Error connecting to wallet:", error);
         }
     };
 
-    const handleInputChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
-    const handleCreateEvent = async () => {
-        try {
-            const res = await fetch("/api/event", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(formData),
-            });
-
-            if (!res.ok) {
-                throw new Error("Failed to create event");
-            }
-
-            const newEvent = await res.json();
-            setEventList((prev) => [...prev, newEvent]);
-            setModalOpen(false);
-            setFormData({ title: "", description: "", capacity: "" });
-        } catch (error) {
-            console.error("Error creating event:", error);
-        }
-    };
-
-    const handleJoinEvent = async (eventId) => {
+    const handleBurnTokens = async (eventPrice) => {
         try {
             if (!walletAddress) {
                 throw new Error("Please connect your wallet first.");
             }
 
-            const res = await fetch(`/api/event/${eventId}/join`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    blockchainAddress: walletAddress,
-                }),
-            });
+            const { tokenContract } = await getContractsWithSigner();
 
-            if (!res.ok) {
-                throw new Error("Failed to join event");
-            }
+            console.log("Burning Event Price:", eventPrice);
 
-            const updatedEvent = await res.json();
-            setEventList((prev) =>
-                prev.map((event) =>
-                    event.id === updatedEvent.id ? updatedEvent : event
-                )
-            );
+            const tx = await tokenContract.burn(eventPrice);
+            await tx.wait();
+
+            alert(`Successfully burned ${eventPrice} tokens for the event!`);
         } catch (error) {
-            console.error("Error joining event:", error);
+            console.error("Error burning tokens:", error.message);
+            alert(error.message || "Failed to burn tokens.");
         }
     };
 
@@ -93,13 +46,9 @@ export default function EventsClient({ events }) {
                     onClick={connectWallet}
                     className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
                 >
-                    {walletAddress ? `Wallet Connected: ${walletAddress.slice(0, 6)}...` : "Connect Wallet"}
-                </button>
-                <button
-                    onClick={() => setModalOpen(true)}
-                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                    Create New Event
+                    {walletAddress
+                        ? `Wallet Connected: ${walletAddress.slice(0, 6)}...`
+                        : "Connect Wallet"}
                 </button>
             </div>
 
@@ -114,60 +63,18 @@ export default function EventsClient({ events }) {
                         <p className="text-sm text-gray-500">
                             Capacity: {event.capacity} | Attendees: {event.attendee.length}
                         </p>
+                        <p className="text-sm text-gray-500">
+                            Price: {event.price} Tokens
+                        </p>
                         <button
-                            onClick={() => handleJoinEvent(event.id)}
-                            className="mt-2 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                            onClick={() => handleBurnTokens(event.price)}
+                            className="mt-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
                         >
                             Join Event
                         </button>
                     </div>
                 ))}
             </div>
-
-            {modalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
-                    <div className="bg-gray-800 p-6 rounded-lg w-96">
-                        <h2 className="text-2xl font-bold mb-4">Create Event</h2>
-                        <div className="space-y-4">
-                            <input
-                                type="text"
-                                name="title"
-                                placeholder="Event Title"
-                                value={formData.title}
-                                onChange={handleInputChange}
-                                className="w-full px-3 py-2 bg-gray-700 text-gray-300 rounded focus:ring focus:ring-blue-500"
-                            />
-                            <textarea
-                                name="description"
-                                placeholder="Event Description"
-                                value={formData.description}
-                                onChange={handleInputChange}
-                                className="w-full px-3 py-2 bg-gray-700 text-gray-300 rounded focus:ring focus:ring-blue-500"
-                            />
-                            <input
-                                type="number"
-                                name="capacity"
-                                placeholder="Event Capacity"
-                                value={formData.capacity}
-                                onChange={handleInputChange}
-                                className="w-full px-3 py-2 bg-gray-700 text-gray-300 rounded focus:ring focus:ring-blue-500"
-                            />
-                            <button
-                                onClick={handleCreateEvent}
-                                className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                            >
-                                Create
-                            </button>
-                            <button
-                                onClick={() => setModalOpen(false)}
-                                className="w-full px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
