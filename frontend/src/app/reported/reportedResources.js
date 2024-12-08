@@ -57,7 +57,6 @@ export default function ReportedResources() {
 
     return (
         <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center py-10">
-            <h1 className="text-4xl font-bold mb-8">Reported Resources</h1>
             {error && <p className="text-red-500 mb-4">{error}</p>}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-11/12 max-w-7xl">
                 {reportedResources.map((resource) => (

@@ -182,6 +182,11 @@ contract AcademicResources {
         }
         revert("Resource not found");
     }
+
+    function getResourceCount() public view returns (uint256) {
+        return nextResourceId - 1;
+    }
+
     function isInFacultyValidators(address user) internal view returns (bool) {
         address[] memory facultyValidators = validator.getFacultyValidators();
         for (uint256 i = 0; i < facultyValidators.length; i++) {
