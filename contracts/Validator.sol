@@ -17,15 +17,15 @@ contract Validator {
 
     address public admin;
 
-    event ValidatorAdded(address indexed validator, uint256 stake);
+    event ValidatorAdded(address indexed validator);
     event ValidatorRemoved(address indexed validator);
-    event TokensStaked(address indexed user, uint256 amount);
+    event TokensStaked(address indexed user);
     event TokensUnstaked(address indexed user, uint256 amount);
 
     constructor(address tokenAddress) {
         token = AcademicToken(tokenAddress);
         circulatingSupply = token.totalSupply();
-        minimumStake = 100;
+        minimumStake = circulatingSupply / 1000000000;
         admin = msg.sender;
     }
 
@@ -37,7 +37,7 @@ contract Validator {
     function addFacultyValidator(address faculty) public onlyAdmin {
         require(!facultyValidators[faculty], "Already a faculty validator");
         facultyValidators[faculty] = true;
-        emit ValidatorAdded(faculty, 0);
+        emit ValidatorAdded(faculty);
     }
 
     function removeFacultyValidator(address faculty) public onlyAdmin {
@@ -51,36 +51,17 @@ contract Validator {
         admin = newAdmin;
     }
 
-    function stakeTokens(uint256 amount) public {
-        require(amount >= minimumStake, "Amount must meet the minimum stake");
+    function addStudentValidator(address user) public {
 
-        token.transferFrom(msg.sender, address(this), amount);
-
-        stakes[msg.sender] += amount;
-
-        if (!isValidator[msg.sender]) {
-            isValidator[msg.sender] = true;
-            studentValidators.push(msg.sender);
-            emit ValidatorAdded(msg.sender, amount);
+        if (!isValidator[user]) {
+            isValidator[user] = true;
+            studentValidators.push(user);
+            emit ValidatorAdded(user);
         } else {
-            emit TokensStaked(msg.sender, amount);
+            emit TokensStaked(user);
         }
     }
 
-    function unstakeTokens(uint256 amount) public {
-        require(stakes[msg.sender] >= amount, "Not enough staked tokens");
-        stakes[msg.sender] -= amount;
-
-        if (stakes[msg.sender] < minimumStake && isValidator[msg.sender]) {
-            isValidator[msg.sender] = false;
-            removeStudentValidator(msg.sender);
-            emit ValidatorRemoved(msg.sender);
-        } else {
-            emit TokensUnstaked(msg.sender, amount);
-        }
-
-        token.transfer(msg.sender, amount);
-    }
 
     function updateMinimumStake() public {
         circulatingSupply = token.totalSupply();
@@ -92,7 +73,7 @@ contract Validator {
         token.transfer(validator, rewardAmount);
     }
 
-    function removeStudentValidator(address validator) internal {
+    function removeStudentValidator(address validator) public {
         for (uint256 i = 0; i < studentValidators.length; i++) {
             if (studentValidators[i] == validator) {
                 studentValidators[i] = studentValidators[studentValidators.length - 1];

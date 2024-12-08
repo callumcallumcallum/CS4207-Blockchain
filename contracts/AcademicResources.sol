@@ -2,12 +2,13 @@
 pragma solidity ^0.8.0;
 
 import "./AcademicToken.sol";
-
+import "./Staking.sol";
 import "./Validator.sol";
 
 contract AcademicResources {
     AcademicToken private tokenContract;
     Validator public validator;
+    Staking public staking;
 
     struct Resource {
         uint256 id;
@@ -35,9 +36,10 @@ contract AcademicResources {
     event ResourceDeleted(uint256 id);
     event TokensRewarded(address indexed user, uint256 amount);
 
-    constructor(address tokenAddress, address validatorAddress) {
+    constructor(address tokenAddress, address validatorAddress, address stakingAddress) {
         tokenContract = AcademicToken(tokenAddress);
         validator = Validator(validatorAddress);
+        staking = Staking(stakingAddress); 
     }
 
 
@@ -45,7 +47,8 @@ contract AcademicResources {
     function uploadResource(string memory name, string memory url) public {
         require(bytes(name).length > 0, "Resource name is required");
         require(bytes(url).length > 0, "Resource URL is required");
-
+        
+        staking.performActionAndReward(msg.sender);
 
         pendingResources.push(Resource({
             id: nextResourceId,
@@ -73,8 +76,10 @@ contract AcademicResources {
 
         for (uint256 i = 0; i < pendingResources.length; i++) {
             if (pendingResources[i].id == id) {
+
                 require(!pendingResources[i].validated, "Resource is already validated");
-                
+                require(pendingResources[i].uploader != msg.sender, "Uploader cannot validate their own resource");
+
                 pendingResources[i].validated = true;
                 resources.push(pendingResources[i]); // push the block to the blockchain
                 
@@ -82,6 +87,8 @@ contract AcademicResources {
                 
                 uint256 reward = calculateUploadReward();
                 //tokenContract.transfer(pendingResources[i].uploader, reward);
+                //staking.rewardToken();
+                staking.performActionAndReward(msg.sender);
                 emit TokensRewarded(pendingResources[i].uploader, reward);
                 emit ResourceValidated(id, msg.sender);
                 emit ResourceUploaded(nextResourceId, pendingResources[i].name, pendingResources[i].url, msg.sender);
@@ -104,6 +111,8 @@ contract AcademicResources {
             if (resources[i].id == id) {
                 require(resources[i].validated, "Resource must be validated to receive upvotes");
                 resources[i].upvotes++;
+                staking.performActionAndReward(msg.sender);
+
                 emit ResourceUpvoted(id, msg.sender, resources[i].upvotes);
 
                 uint256 reward = calculateUpvoteReward(resources[i].upvotes);
@@ -120,6 +129,7 @@ contract AcademicResources {
         for (uint256 i = 0; i < resources.length; i++) {
             if (resources[i].id == id) {
                 resources[i].reports++;
+
                 if (!resources[i].reported) {
                     resources[i].reported = true;
                     resources[i].reporter = msg.sender;

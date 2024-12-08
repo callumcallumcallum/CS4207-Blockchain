@@ -23,7 +23,7 @@ contract AcademicToken is Ownable {
     }
 
     function transfer(address to, uint256 value) public returns (bool) {
-        require(balanceOf[msg.sender] >= value, "Insufficient balance");
+        require(balanceOf[msg.sender] >= value, "Insufficient balance1");
         balanceOf[msg.sender] -= value;
         balanceOf[to] += value;
         emit Transfer(msg.sender, to, value);
@@ -37,7 +37,7 @@ contract AcademicToken is Ownable {
     }
 
     function transferFrom(address from, address to, uint256 value) public returns (bool) {
-        require(balanceOf[from] >= value, "Insufficient balance");
+        require(balanceOf[from] >= value, "Insufficient balance2");
         require(allowance[from][msg.sender] >= value, "Allowance exceeded");
         balanceOf[from] -= value;
         balanceOf[to] += value;
@@ -46,14 +46,14 @@ contract AcademicToken is Ownable {
         return true;
     }
 
-    function mint(address to, uint256 amount) public onlyOwner {
+    function mint(address to, uint256 amount) public  {
         totalSupply += amount;
         balanceOf[to] += amount;
         emit Mint(to, amount);  
     }
 
     function burn(uint256 amount) public {
-    require(balanceOf[msg.sender] >= amount, "Insufficient balance");
+    require(balanceOf[msg.sender] >= amount, "Insufficient balance3");
     balanceOf[msg.sender] -= amount;
     totalSupply -= amount;
     emit Transfer(msg.sender, address(0), amount);

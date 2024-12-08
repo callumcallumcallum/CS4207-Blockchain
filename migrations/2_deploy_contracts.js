@@ -1,6 +1,7 @@
 const AcademicToken = artifacts.require("AcademicToken");
 const Validator = artifacts.require("Validator");
 const AcademicResources = artifacts.require("AcademicResources");
+const Staking = artifacts.require("Staking");
 const path = require("path");
 
 module.exports = async function (deployer, network, accounts) {
@@ -15,8 +16,12 @@ module.exports = async function (deployer, network, accounts) {
   const validatorInstance = await Validator.deployed();
   console.log(`Validator deployed at ${validatorInstance.address}`);
 
-  await deployer.deploy(AcademicResources, tokenInstance.address, validatorInstance.address);
+  await deployer.deploy(Staking, tokenInstance.address, web3.utils.toWei("0.01", "ether")  , validatorInstance.address);
+  const stakingInstance = await Staking.deployed();
+
+  await deployer.deploy(AcademicResources, tokenInstance.address, validatorInstance.address, stakingInstance.address);
   const resourcesInstance = await AcademicResources.deployed();
+
   console.log(`AcademicResources deployed at ${resourcesInstance.address}`);
 
   const fundingAmount = web3.utils.toWei("500", "ether");
