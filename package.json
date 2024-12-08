@@ -2,6 +2,7 @@
   "dependencies": {
     "@openzeppelin/contracts": "^4.7.0",
     "openzeppelin": "^1.0.0",
-    "solc": "^0.8.20"
+    "solc": "^0.8.20",
+    "solidity": "^0.0.1"
   }
 }

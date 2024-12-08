@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
-
 import "@openzeppelin/contracts/access/Ownable.sol";
+
+pragma solidity ^0.8.0;
 
 contract AcademicToken is Ownable {
     string public name = "AcademicToken";
@@ -16,9 +16,8 @@ contract AcademicToken is Ownable {
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
     event Mint(address indexed to, uint256 value);
-    event Burn(address indexed from, uint256 value);
 
-    constructor(uint256 initialSupply) Ownable(msg.sender) {
+    constructor(uint256 initialSupply) {
         totalSupply = initialSupply;
         balanceOf[msg.sender] = initialSupply;
     }
@@ -50,13 +49,14 @@ contract AcademicToken is Ownable {
     function mint(address to, uint256 amount) public onlyOwner {
         totalSupply += amount;
         balanceOf[to] += amount;
-        emit Mint(to, amount);
+        emit Mint(to, amount);  
     }
 
     function burn(uint256 amount) public {
-        require(balanceOf[msg.sender] >= amount, "Insufficient balance");
-        balanceOf[msg.sender] -= amount;
-        totalSupply -= amount;
-        emit Burn(msg.sender, amount);
-    }
+    require(balanceOf[msg.sender] >= amount, "Insufficient balance");
+    balanceOf[msg.sender] -= amount;
+    totalSupply -= amount;
+    emit Transfer(msg.sender, address(0), amount);
+}
+
 }
