@@ -174,21 +174,15 @@ contract AcademicResources {
         return (circulation / 100000) * upvotes;
     }
 
-    function getResource(uint256 id) public view returns (Resource memory) {
-        for (uint256 i = 0; i < resources.length; i++) {
-            if (resources[i].id == id) {
-                return resources[i];
-            }
-        }
-        revert("Resource not found");
+   function getResource(uint256 id) public view returns (Resource memory) {
+        require(id > 0 && id <= resources.length, "Invalid resource ID");
+        return resources[id - 1];
     }
-    function isInFacultyValidators(address user) internal view returns (bool) {
-        address[] memory facultyValidators = validator.getFacultyValidators();
-        for (uint256 i = 0; i < facultyValidators.length; i++) {
-            if (facultyValidators[i] == user) {
-                return true;
-            }
-        }
-        return false;
+
+    function getValidatedResources() public view returns (Resource[] memory) {
+        return resources;
+    }
+    function getPendingResources() public view returns (Resource[] memory){
+        return pendingResources;
     }
 }

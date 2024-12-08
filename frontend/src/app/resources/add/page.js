@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 import AcademicResourcesABI from "../../../../../build/contracts/AcademicResources.json";
+import ValidatorABI from "../../../../../build/contracts/Validator.json";
+import TokenABI from "../../../../../build/contracts/AcademicToken.json";
 
 export default function AddResourcePage() {
     const [name, setName] = useState("");
@@ -10,6 +12,40 @@ export default function AddResourcePage() {
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState(null);
+
+    const createStake = async () => {
+        console.log("Starting stake process...");
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+
+        console.log("Token Contract Address:", process.env.NEXT_PUBLIC_TOKEN_ADDRESS);
+        const tokenContract = new ethers.Contract(
+            process.env.NEXT_PUBLIC_TOKEN_ADDRESS,
+            TokenABI.abi,
+            signer
+        );
+
+        console.log("Approving tokens...");
+        const approvalTx = await tokenContract.approve(
+            process.env.NEXT_PUBLIC_CONTRACT_ADDRESS,
+            10^18
+        );
+        await approvalTx.wait();
+        console.log("Tokens approved.");
+
+        console.log("Staking tokens...");
+        const validatorContract = new ethers.Contract(
+            process.env.NEXT_PUBLIC_CONTRACT_ADDRESS,
+            ValidatorABI.abi,
+            signer
+        );
+
+        const stakeTx = await validatorContract.stakeTokens(10^18);
+        await stakeTx.wait();
+        console.log("Tokens staked successfully.");
+    };
+
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -48,6 +84,10 @@ export default function AddResourcePage() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        createStake()
+    }, [])
 
     return (
         <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center py-10">

@@ -23,24 +23,36 @@ export default function ResourcesPage() {
                 signer
             );
 
+            console.log("Fetching resources...");
             const resources = [];
             let i = 1;
 
             while (true) {
                 try {
+                    console.log(`Resource ${i}:`);
                     const resource = await contract.getResource(i);
+                    console.log(`Resource ${i}:`, resource);
+
                     resources.push({
-                        id: resource.id,
+                        id: i,
                         name: resource.name,
                         url: resource.url,
                         uploader: resource.uploader,
-                        upvotes: resource.upvotes,
-                        reports: resource.reports,
+                        upvotes: resource.upvotes.toString(),
+                        reports: resource.reports.toString(),
                         validated: resource.validated,
                     });
                     i++;
                 } catch (error) {
-                    break;
+                    console.error(`Error fetching resource ${i}:`, error.message);
+
+                    if (
+                        error.message.includes("Resource not found") ||
+                        error.message.includes("revert")
+                    ) {
+                        break;
+                    }
+                    throw error; 
                 }
             }
 
