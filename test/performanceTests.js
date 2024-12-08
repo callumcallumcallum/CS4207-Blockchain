@@ -1,15 +1,28 @@
 const AcademicToken = artifacts.require("AcademicToken");
 const Validator = artifacts.require("Validator");
+const Staking = artifacts.require("Staking");
 const AcademicResources = artifacts.require("AcademicResources");
 
 contract("Performance Tests", (accounts) => {
   const [deployer, user1, user2, user3, validator1] = accounts;
-  let token, validator, resources;
+  let token, validator, staking, resources;
 
   before(async () => {
-    token = await AcademicToken.new(web3.utils.toWei("1000000", "ether"));
-    validator = await Validator.new(token.address);
-    resources = await AcademicResources.new(token.address, validator.address);
+    token = await AcademicToken.new(web3.utils.toWei("1000000", "ether"), {
+      from: deployer,
+    });
+    validator = await Validator.new(token.address, { from: deployer });
+    staking = await Staking.new(token.address, 100, validator.address, {
+      from: deployer,
+    });
+    resources = await AcademicResources.new(
+      token.address,
+      validator.address,
+      staking.address,
+      { from: deployer }
+    );
+
+    const initialAllowance = web3.utils.toWei("1000", "ether");
 
     await token.transfer(user1, web3.utils.toWei("1000", "ether"), {
       from: deployer,
@@ -24,32 +37,26 @@ contract("Performance Tests", (accounts) => {
       from: deployer,
     });
 
-    await token.approve(validator.address, web3.utils.toWei("500", "ether"), {
-      from: user1,
-    });
-    await token.approve(validator.address, web3.utils.toWei("500", "ether"), {
-      from: user2,
-    });
-    await token.approve(validator.address, web3.utils.toWei("500", "ether"), {
-      from: user3,
-    });
-    await token.approve(validator.address, web3.utils.toWei("500", "ether"), {
+    await token.approve(staking.address, initialAllowance, { from: user1 });
+    await token.approve(staking.address, initialAllowance, { from: user2 });
+    await token.approve(staking.address, initialAllowance, { from: user3 });
+    await token.approve(staking.address, initialAllowance, {
       from: validator1,
     });
 
-    await validator.stakeTokens(web3.utils.toWei("1", "ether"), {
-      from: validator1,
-    });
-
+    await staking.stake(web3.utils.toWei("10", "ether"), { from: validator1 });
     await validator.addFacultyValidator(validator1, { from: deployer });
 
     await token.mint(resources.address, web3.utils.toWei("100000", "ether"), {
       from: deployer,
     });
+    await token.mint(staking.address, web3.utils.toWei("10000", "ether"), {
+      from: deployer,
+    });
   });
 
   describe("Transaction Cost Tests", () => {
-    it("should measure gas cost for resource validation", async () => {
+    it("should measure gas cost for resource validation with staking", async () => {
       await resources.uploadResource(
         "Gas Test Validation Resource",
         "https://gastestvalidation.com",
@@ -59,7 +66,22 @@ contract("Performance Tests", (accounts) => {
       console.log(`Gas used for resource validation: ${tx.receipt.gasUsed}`);
     });
 
-    it("should measure gas cost for upvoting a resource", async () => {
+    it("should measure gas cost for staking", async () => {
+      const tx = await staking.stake(web3.utils.toWei("10", "ether"), {
+        from: user1,
+      });
+      console.log(`Gas used for staking: ${tx.receipt.gasUsed}`);
+    });
+
+    it("should measure gas cost for unstaking", async () => {
+      await staking.stake(web3.utils.toWei("10", "ether"), { from: user1 });
+      const tx = await staking.unstake(web3.utils.toWei("10", "ether"), {
+        from: user1,
+      });
+      console.log(`Gas used for unstaking: ${tx.receipt.gasUsed}`);
+    });
+
+    it("should measure gas cost for upvoting a resource with staking rewards", async () => {
       await resources.uploadResource(
         "Gas Test Upvote Resource",
         "https://gastestupvote.com",
@@ -83,7 +105,7 @@ contract("Performance Tests", (accounts) => {
       console.log(`Resource upload latency: ${end - start} ms`);
     });
 
-    it("should measure latency for resource validation", async () => {
+    it("should measure latency for resource validation with staking rewards", async () => {
       await resources.uploadResource(
         "Latency Test Validation Resource",
         "https://latencytestvalidation.com",
@@ -145,7 +167,7 @@ contract("Performance Tests", (accounts) => {
 
       for (let i = 0; i < transactions; i++) {
         const staker = i % 3 === 0 ? user1 : i % 3 === 1 ? user2 : user3;
-        await validator.stakeTokens(stakeAmount, { from: staker });
+        await staking.stake(stakeAmount, { from: staker });
       }
 
       const end = Date.now();
@@ -163,6 +185,7 @@ contract("Performance Tests", (accounts) => {
 
     it("should handle high volume of resource validations", async () => {
       const numValidations = 100;
+
       for (let i = 4; i <= 103; i++) {
         await resources.uploadResource(
           `Validation Resource ${i}`,
