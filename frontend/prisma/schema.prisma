@@ -8,16 +8,17 @@ datasource db {
 }
 
 model Event {
-  id        Int     @id @default(autoincrement())
-  title      String
-  description  String
-  capacity Int 
-  attendee Attendee[]
+  id            Int     @id @default(autoincrement())
+  title         String
+  description   String
+  price         Float
+  capacity      Int 
+  attendee      Attendee[]
 }
 
 model Attendee{
-    id Int @id @default(autoincrement())
-    event Event @relation(fields: [eventID], references: [id])
-    eventID Int
-    blockchainAddress String
+    id                  Int @id @default(autoincrement())
+    event               Event @relation(fields: [eventID], references: [id])
+    eventID             Int
+    blockchainAddress   String
 }
