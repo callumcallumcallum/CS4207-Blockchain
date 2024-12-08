@@ -43,7 +43,7 @@ export default function ReportedResources() {
                 signer
             );
 
-            await contract.deleteReportedResource(resourceId);
+            await contract.deleteResource(resourceId);
             alert("Resource deleted successfully!");
             fetchReportedResources();
         } catch (error) {
