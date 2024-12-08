@@ -37,7 +37,6 @@ contract AcademicResources {
     }
 
 
-    // Upload a new resource
     function uploadResource(string memory name, string memory url) public {
         require(bytes(name).length > 0, "Resource name is required");
         require(bytes(url).length > 0, "Resource URL is required");

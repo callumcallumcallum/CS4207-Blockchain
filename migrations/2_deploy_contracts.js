@@ -23,6 +23,11 @@ module.exports = async function (deployer, network, accounts) {
   
   await deployer.deploy(AcademicResources, tokenInstance.address, validatorInstance.address);
 
+module.exports = async function (deployer, network, accounts) {
+  const initialValidators = [accounts[0], accounts[1], accounts[2]];
+  const approvalsNeeded = 2;
+
+  await deployer.deploy(AcademicResources, initialValidators, approvalsNeeded);
   const contract = await AcademicResources.deployed();
 
 
@@ -43,3 +48,4 @@ module.exports = async function (deployer, network, accounts) {
   );
   const resourcesInstance = await AcademicResources.deployed();
 };
+}
