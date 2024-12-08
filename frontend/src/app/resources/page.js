@@ -23,22 +23,30 @@ export default function ResourcesPage() {
                 signer
             );
 
-            const nextResourceId = await contract.getNextResourceId();
             const resources = [];
-            for (let i = 1; i < nextResourceId; i++) {
-                const resource = await contract.getResource(i);
-                resources.push({
-                    id: i,
-                    name: resource[0],
-                    url: resource[1],
-                    uploader: resource[2],
-                    votesFor: resource[3],
-                    votesAgainst: resource[4],
-                    approved: resource[5],
-                });
+            let i = 1;
+
+            while (true) {
+                try {
+                    const resource = await contract.getResource(i);
+                    resources.push({
+                        id: resource.id,
+                        name: resource.name,
+                        url: resource.url,
+                        uploader: resource.uploader,
+                        upvotes: resource.upvotes,
+                        reports: resource.reports,
+                        validated: resource.validated,
+                    });
+                    i++;
+                } catch (error) {
+                    break;
+                }
             }
+
             setResources(resources);
         } catch (error) {
+            console.error("Error fetching resources:", error.message);
             setError(error.message);
         }
     };
@@ -56,13 +64,13 @@ export default function ResourcesPage() {
                     <div key={resource.id} className="bg-gray-800 p-6 rounded-lg shadow-md">
                         <h2 className="text-xl font-semibold">{resource.name}</h2>
                         <p className="text-sm text-gray-400 mb-2">Uploader: {resource.uploader}</p>
-                        <p className="text-sm text-gray-400 mb-2">Votes For: {resource.votesFor}</p>
-                        <p className="text-sm text-gray-400 mb-2">Votes Against: {resource.votesAgainst}</p>
+                        <p className="text-sm text-gray-400 mb-2">Upvotes: {resource.upvotes}</p>
+                        <p className="text-sm text-gray-400 mb-2">Reports: {resource.reports}</p>
                         <p
-                            className={`font-medium ${resource.approved ? "text-green-500" : "text-yellow-500"
+                            className={`font-medium ${resource.validated ? "text-green-500" : "text-yellow-500"
                                 }`}
                         >
-                            Status: {resource.approved ? "Approved" : "Pending"}
+                            Validated: {resource.validated ? "Yes" : "No"}
                         </p>
                         <a
                             href={resource.url}
