@@ -29,31 +29,31 @@ contract Staking is Ownable{
         rewardRate = _rewardRate;
     }
 
-    modifier updateReward(address account){
-        rewardPerTokenStored = rewardPerToken();
-        lastUpdateTime = block.timestamp;
+    // modifier updateReward(address account){
+    //     rewardPerTokenStored = rewardPerToken();
+    //     lastUpdateTime = block.timestamp;
 
-        if(account != address(0)){
-            rewards[account] = earned(account);
-            userRewardPerTokenPaid[account] = rewardPerTokenStored;
-        }
-        _;
-    }
+    //     if(account != address(0)){
+    //         rewards[account] = earned(account);
+    //         userRewardPerTokenPaid[account] = rewardPerTokenStored;
+    //     }
+    //     _;
+    // }
 
-    function rewardPerToken() public view returns (uint256){
-        if(totalStaked == 0){
-            return rewardPerTokenStored;
-        }
+    // function rewardPerToken() public view returns (uint256){
+    //     if(totalStaked == 0){
+    //         return rewardPerTokenStored;
+    //     }
 
-        return rewardPerTokenStored + ((block.timestamp - lastUpdateTime) * rewardRate * 1e18 / totalStaked);
-    }
+    //     return rewardPerTokenStored + ((block.timestamp - lastUpdateTime) * rewardRate * 1e18 / totalStaked);
+    // }
 
 
     function earned(address account) public view returns (uint256){
-        return balance[account] * (rewardPerToken() - userRewardPerTokenPaid[account]) / 1e18 + rewards[account];
+        return rewards[account];
     }
 
-    function stake(uint256 amount) public updateReward(msg.sender){
+    function stake(uint256 amount) public{
         require(amount > 0, "Can't stake a value of zero.");
     
         totalStaked += amount;
@@ -68,7 +68,7 @@ contract Staking is Ownable{
         emit Staked(msg.sender, amount);
     }
 
-    function unstake(uint256 amount) public updateReward(msg.sender){
+    function unstake(uint256 amount) public{
         require(amount > 0, "Can't withdraw a value of zero.");
         require(balance[msg.sender] >= amount, "Insufficient balance4.");
 
@@ -81,11 +81,11 @@ contract Staking is Ownable{
         emit Withdrawn(msg.sender, amount);
     }
 
-    function setRewardRate(uint256 _rewardRate) public updateReward(address(0)){
-        rewardRate = _rewardRate;
-    }
+    // function setRewardRate(uint256 _rewardRate) public updateReward(address(0)){
+    //     rewardRate = _rewardRate;
+    // }
 
-    function payValidatorReward(address valAddr) public updateReward(valAddr){
+    function payValidatorReward(address valAddr) public{
         uint256 reward = earned(valAddr);
         require(reward > 0, "No reward available :(");
 
@@ -94,6 +94,12 @@ contract Staking is Ownable{
         rewardToken.transfer(valAddr, reward);
         emit RewardPaid(valAddr, reward);
 
+    }
+
+    function performActionAndReward(address user) public{
+        uint256 rewardToAdd = (rewardToken.totalSupply() * 1) / 10000;
+
+        rewards[user] += rewardToAdd;  
     }
 
 }
