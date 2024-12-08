@@ -17,6 +17,8 @@ contract AcademicResources {
         uint256 upvotes;
         uint256 reports;
         bool validated;
+        bool reported;
+        address reporter;
     }
 
     Resource[] private resources;
@@ -29,6 +31,7 @@ contract AcademicResources {
     event ResourceValidated(uint256 id, address validator);
     event ResourceUpvoted(uint256 id, address upvoter, uint256 upvoteCount);
     event ResourceReported(uint256 id, address reporter, uint256 reportCount);
+    event ResourceDeleted(uint256 id);
     event TokensRewarded(address indexed user, uint256 amount);
 
     constructor(address tokenAddress, address validatorAddress) {
@@ -48,7 +51,9 @@ contract AcademicResources {
             uploader: msg.sender,
             upvotes: 0,
             reports: 0,
-            validated: false
+            validated: false,
+            reported: false,
+            reporter: address(0)
         }));
     
         emit ResourceUploaded(nextResourceId, name, url, msg.sender);
@@ -99,11 +104,64 @@ contract AcademicResources {
         for (uint256 i = 0; i < resources.length; i++) {
             if (resources[i].id == id) {
                 resources[i].reports++;
+                if (!resources[i].reported) {
+                    resources[i].reported = true;
+                    resources[i].reporter = msg.sender;
+                }
                 emit ResourceReported(id, msg.sender, resources[i].reports);
                 return;
             }
         }
         revert("Resource not found");
+    }
+
+    function getReportedResources() public view returns (Resource[] memory) {
+        uint256 reportedCount =0;
+        for (uint256 i = 0; i < resources.length; i++) {
+            if (resources[i].reports > 0) {
+                reportedCount++;
+            }
+        }
+        Resource[] memory reportedResources = new Resource[](reportedCount);
+        uint256 index = 0;
+        for (uint256 j = 0; j < resources.length; j++) {
+            if (resources[j].reports > 0) {
+                reportedResources[index] = resources[j];
+                index++;
+            }
+        }
+        return reportedResources;
+    }
+
+    function deleteResource(uint256 id) public {
+        require(
+            validator.isValidator(msg.sender) || 
+            validator.facultyValidators(msg.sender) || 
+            msg.sender == validator.admin() ||
+            isInFacultyValidators(msg.sender),
+            "Only validators, faculty, or admins can delete resources"
+        );
+
+        for (uint256 i = 0; i < resources.length; i++) {
+            if (resources[i].id == id) {
+                address reporter = resources[i].reporter;
+                uint256 reward = calculateDeleteReward();
+                tokenContract.transfer(reporter, reward);
+                emit TokensRewarded(reporter, reward);
+
+                // Remove the resource from the array
+                resources[i] = resources[resources.length - 1];
+                resources.pop();
+                emit ResourceDeleted(id);
+                return;
+            }
+        }
+        revert("Resource not found");
+    }
+
+    function calculateDeleteReward() internal view returns (uint256) {
+        uint256 circulation = tokenContract.totalSupply();
+        return circulation / 85000;
     }
 
     function calculateUploadReward() internal view returns (uint256) {
@@ -123,5 +181,14 @@ contract AcademicResources {
             }
         }
         revert("Resource not found");
+    }
+    function isInFacultyValidators(address user) internal view returns (bool) {
+        address[] memory facultyValidators = validator.getFacultyValidators();
+        for (uint256 i = 0; i < facultyValidators.length; i++) {
+            if (facultyValidators[i] == user) {
+                return true;
+            }
+        }
+        return false;
     }
 }

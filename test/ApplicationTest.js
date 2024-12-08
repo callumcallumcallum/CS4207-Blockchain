@@ -169,4 +169,24 @@ contract("AcademicToken, Validator, and AcademicResources", (accounts) => {
     const resource = await resources.getResource(1);
     assert.equal(resource.reports, 1, "Resource should have one report");
   });
+
+  it("should reward the reporter after the resource is deleted", async () => {
+    const resourceName = "Resource 1";
+    const resourceURL = "http://example.com/resource1";
+    await resources.uploadResource(resourceName, resourceURL, { from: student1 });
+    await resources.reportResource(1, { from: student2 });
+    let resource = await resources.getResource(1);
+    assert.equal(resource.reports, 1, "Resource should have one report");
+    const student1Balance = await token.balanceOf(student1);
+    console.log("Student1 Balance:", student1Balance.toString());
+    const minimumStake = await validator.minimumStake();
+    console.log("Minimum Stake:", minimumStake.toString());
+    await token.approve(validator.address, minimumStake, { from: student1 });
+    await validator.stakeTokens(minimumStake, { from: student1 });
+    await validator.addFacultyValidator(faculty, { from: admin });
+    await resources.deleteResource(1, { from: faculty });
+    const reporterBalance = await token.balanceOf(student2);
+    assert(reporterBalance.gt(web3.utils.toBN(0)), "Reporter should be rewarded with tokens");
+    
+  });
 });
