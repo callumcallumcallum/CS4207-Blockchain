@@ -25,7 +25,7 @@ contract Validator {
     constructor(address tokenAddress) {
         token = AcademicToken(tokenAddress);
         circulatingSupply = token.totalSupply();
-        minimumStake = circulatingSupply / 1000000000;
+        minimumStake = 100;
         admin = msg.sender;
     }
 
