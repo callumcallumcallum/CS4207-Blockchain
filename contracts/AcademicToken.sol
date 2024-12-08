@@ -1,6 +1,9 @@
+// SPDX-License-Identifier: MIT
+
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 pragma solidity ^0.8.0;
+
 contract AcademicToken is Ownable {
     string public name = "AcademicToken";
     string public symbol = "ATKN";
@@ -43,7 +46,7 @@ contract AcademicToken is Ownable {
         return true;
     }
 
-    function mint(address to, uint256 amount) public {
+    function mint(address to, uint256 amount) public onlyOwner {
         totalSupply += amount;
         balanceOf[to] += amount;
         emit Mint(to, amount);  

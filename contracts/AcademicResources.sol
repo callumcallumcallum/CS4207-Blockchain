@@ -6,7 +6,7 @@ import "./AcademicToken.sol";
 import "./Validator.sol";
 
 contract AcademicResources {
-    AcademicToken public token;
+    AcademicToken private tokenContract;
     Validator public validator;
 
     struct Resource {
@@ -23,7 +23,6 @@ contract AcademicResources {
 
     uint256 private nextResourceId = 1;
 
-    AcademicToken private tokenContract;
 
     // Events (for updating logs)
     event ResourceUploaded(uint256 id, string name, string url, address uploader);
@@ -33,7 +32,7 @@ contract AcademicResources {
     event TokensRewarded(address indexed user, uint256 amount);
 
     constructor(address tokenAddress, address validatorAddress) {
-        token = AcademicToken(tokenAddress);
+        tokenContract = AcademicToken(tokenAddress);
         validator = Validator(validatorAddress);
     }
 
@@ -71,7 +70,7 @@ contract AcademicResources {
                 resources[i].validated = true;
 
                 uint256 reward = calculateUploadReward();
-                token.transfer(resources[i].uploader, reward);
+                tokenContract.transfer(resources[i].uploader, reward);
                 emit TokensRewarded(resources[i].uploader, reward);
 
                 emit ResourceValidated(id, msg.sender);
@@ -89,7 +88,7 @@ contract AcademicResources {
                 emit ResourceUpvoted(id, msg.sender, resources[i].upvotes);
 
                 uint256 reward = calculateUpvoteReward(resources[i].upvotes);
-                token.transfer(resources[i].uploader, reward);
+                tokenContract.transfer(resources[i].uploader, reward);
                 emit TokensRewarded(resources[i].uploader, reward);
                 return;
             }
@@ -109,12 +108,12 @@ contract AcademicResources {
     }
 
     function calculateUploadReward() internal view returns (uint256) {
-        uint256 circulation = token.totalSupply();
+        uint256 circulation = tokenContract.totalSupply();
         return circulation / 10000;
     }
 
     function calculateUpvoteReward(uint256 upvotes) internal view returns (uint256) {
-        uint256 circulation = token.totalSupply();
+        uint256 circulation = tokenContract.totalSupply();
         return (circulation / 100000) * upvotes;
     }
 

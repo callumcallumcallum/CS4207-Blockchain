@@ -25,7 +25,7 @@ contract Validator {
     constructor(address tokenAddress) {
         token = AcademicToken(tokenAddress);
         circulatingSupply = token.totalSupply();
-        minimumStake = circulatingSupply / 1000;
+        minimumStake = circulatingSupply / 1000000000;
         admin = msg.sender;
     }
 
@@ -102,7 +102,21 @@ contract Validator {
         }
     }
 
-    function getValidators() public view returns (address[] memory) {
+    function getStudentValidators() public view returns (address[] memory) {
         return studentValidators;
     }
+
+
+    function getFacultyValidators() public view returns (address[] memory) {
+        address[] memory result = new address[](studentValidators.length);
+        uint256 index = 0;
+
+        for (uint256 i = 0; i < studentValidators.length; i++) {
+            if (facultyValidators[studentValidators[i]]) {
+                result[index] = studentValidators[i];
+                index++;
+            }
+        }
+
+        return result;    }
 }
