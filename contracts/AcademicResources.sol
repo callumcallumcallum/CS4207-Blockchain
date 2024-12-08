@@ -53,8 +53,8 @@ contract AcademicResources {
     
         emit ResourceUploaded(nextResourceId, name, url, msg.sender);
 
-        uint256 rewardAmount = 10 * (10 ** uint256(tokenContract.decimals()));
-        tokenContract.mint(msg.sender, rewardAmount);
+        // uint256 rewardAmount = 10 * (10 ** uint256(tokenContract.decimals()));
+        // tokenContract.mint(msg.sender, rewardAmount);
 
         nextResourceId++;
 
